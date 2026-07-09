@@ -118,9 +118,9 @@ The `main` branch should contain only stable, polished project artifacts, includ
 
 Keep final model files clean and separate:
 
-- `model_scratch.ipynb`
-- `model_pretrained.ipynb`
-- `model_custom.ipynb`
+- `base_model.ipynb`
+- `pre_trained.ipynb`
+- `model3.ipynb`
 
 ## Commit And Push Discipline
 Commit consistently every 2-3 days with meaningful messages that show authentic progress over multiple weeks. Last-minute bulk uploads without meaningful history are flagged as malpractice risk and may be rejected.
@@ -147,14 +147,14 @@ Do not delete milestone branches after merging. They must remain live in the rem
 - Commit exploratory work to `milestone-1`.
 
 ## Phase 2: Three-Model Architecture
-- Draft `model_scratch.ipynb` with custom neural layers.
-- Draft `model_pretrained.ipynb` with a fine-tuned local transformer.
-- Draft `model_custom.ipynb` with the experimental architecture or ensemble.
+- Draft `base_model.ipynb` with custom neural layers.
+- Draft `pre_trained.ipynb` with a fine-tuned local transformer.
+- Draft `model3.ipynb` with the experimental architecture or ensemble.
 - Integrate `wandb.init()` and metric logging into all training loops.
 - Keep milestone Q&A separate from final model notebooks.
 
 ## Phase 3: Cloud Optimization And Finalization
-- Push model notebooks to Kaggle with `kaggle kernels push`.
+- Push model notebooks to Kaggle with `kaggle kernels push -p`.
 - Train and validate on Kaggle GPUs.
 - Fetch logs, inspect failures, and tune hyperparameters using W&B metrics.
 - Generate top-three predictions in the required submission format:

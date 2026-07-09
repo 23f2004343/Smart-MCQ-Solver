@@ -1,6 +1,6 @@
 {
-  "id": "vishunurajagopalan/dlga-test-pretrained",
-  "title": "DLGA Test — Model 2 Pretrained",
+  "id": "vishunurajagopalan/dlga-test-model-2-pretrained",
+  "title": "DLGA Test - Model 2 Pretrained",
   "code_file": "pre_trained.ipynb",
   "language": "python",
   "kernel_type": "notebook",
@@ -8,7 +8,9 @@
   "enable_gpu": "true",
   "enable_internet": "true",
   "dataset_sources": [],
-  "competition_sources": [],
+  "competition_sources": [
+    "smart-mcq-solver-challenge"
+  ],
   "kernel_sources": [],
   "model_sources": []
 }
