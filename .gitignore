@@ -1,0 +1,10 @@
+.env
+data/
+*.zip
+*.pt
+*.pkl
+*.index
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+submission.csv
