@@ -218,8 +218,13 @@ For optional bonus marks, prepare a stable Hugging Face Space, Streamlit app, Fl
               return p
       return filename
 
+## KAGGLE ENVIRONMENT PATHS & WORKSPACE RULES
 
-the folder paths for the competition :
-train csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/train.csv"
-test csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/test.csv"
-sample_submission csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/sample_submission.csv"
+### 1. Exact Kaggle Competition Paths
+When executing on Kaggle GPUs, the competition data is mounted at these exact absolute paths. The path resolution functions must prioritize checking these locations first:
+* **Train:** `/kaggle/input/competitions/smart-mcq-solver-challenge/train.csv`
+* **Test:** `/kaggle/input/competitions/smart-mcq-solver-challenge/test.csv`
+* **Sample Submission:** `/kaggle/input/competitions/smart-mcq-solver-challenge/sample_submission.csv`
+
+### 2. File Preservation Rule
+**CRITICAL:** Never delete, overwrite, or modify `nb/miles.ipynb` or any other backup notebooks in the root `nb/` folder. These contain empty or backup copies of milestone codes and must be preserved locally.

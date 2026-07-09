@@ -1,0 +1,16 @@
+{
+  "id": "vishunurajagopalan/dl-23f2004343-t22026",
+  "title": "DL-23f2004343-t22026",
+  "code_file": "dl-23f2004343-t22026.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": [
+    "smart-mcq-solver-challenge"
+  ],
+  "kernel_sources": [],
+  "model_sources": []
+}

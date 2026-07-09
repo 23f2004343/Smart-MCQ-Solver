@@ -1,6 +1,5 @@
 .env
 data/
-*.zip
 *.pt
 *.pkl
 *.index
@@ -8,3 +7,9 @@ data/
 .ipynb_checkpoints/
 __pycache__/
 submission.csv
+rules/
+AGENTS.md
+.antigravity/
+smart-mcq-solver-challenge.zip
+nb/cinema.ipynb
+nb/miles.ipynb
