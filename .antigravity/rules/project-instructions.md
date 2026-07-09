@@ -217,3 +217,9 @@ For optional bonus marks, prepare a stable Hugging Face Space, Streamlit app, Fl
           if os.path.exists(p):
               return p
       return filename
+
+
+the folder paths for the competition :
+train csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/train.csv"
+test csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/test.csv"
+sample_submission csv - "/kaggle/input/competitions/smart-mcq-solver-challenge/sample_submission.csv"
