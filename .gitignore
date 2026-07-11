@@ -1,5 +1,6 @@
 .env
 data/
+*.zip
 *.pt
 *.pkl
 *.index
@@ -10,6 +11,5 @@ submission.csv
 rules/
 AGENTS.md
 .antigravity/
-smart-mcq-solver-challenge.zip
 nb/cinema.ipynb
 nb/miles.ipynb

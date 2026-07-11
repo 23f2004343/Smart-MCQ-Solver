@@ -1,14 +1,15 @@
 {
-  "id": "vishunurajagopalan/dlga-test-custom",
-  "title": "DLGA Test — Model 3 Custom",
+  "id": "vishunurajagopalan/mcq-solver-model3-custom",
+  "title": "MCQ Solver Model3 Custom",
   "code_file": "model3.ipynb",
   "language": "python",
   "kernel_type": "notebook",
-  "is_private": "true",
-  "enable_gpu": "true",
-  "enable_internet": "true",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
   "dataset_sources": [],
-  "competition_sources": [],
-  "kernel_sources": [],
-  "model_sources": []
+  "competition_sources": [
+    "smart-mcq-solver-challenge"
+  ],
+  "kernel_sources": []
 }
