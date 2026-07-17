@@ -13,3 +13,4 @@ AGENTS.md
 .antigravity/
 nb/cinema.ipynb
 nb/miles.ipynb
+generate_notebook.py
