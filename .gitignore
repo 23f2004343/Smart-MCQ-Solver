@@ -19,3 +19,10 @@ nb/fallback_models/
 viva/
 report/
 AUDIT_AND_TOC_ANALYSIS.md
+
+# Local Hugging Face model downloads and caches
+bert-base-uncased/
+.cache/huggingface/
+huggingface/
+transformers_cache/
+wandb/
