@@ -397,3 +397,114 @@ In this project, we successfully developed, evaluated, and documented an end-to-
 5. **Reimers, N., & Gurevych, I. (2019).** Sentence-BERT: Sentence embeddings using Siamese BERT-networks. *Empirical Methods in Natural Language Processing (EMNLP)*.
 6. **Robertson, S., & Zaragoza, H. (2009).** The probabilistic relevance framework: BM25 and beyond. *Foundations and Trends in Information Retrieval*, 3(4), 333–389.
 7. **Biewald, L. (2020).** Experiment tracking with Weights & Biases. *Software available from wandb.com*.
+
+## Appendix: Cell-by-Cell Notebook Breakdown
+
+The entries below describe every cell in the three production notebooks in execution order. Markdown cells explain the section or heading they introduce; code cells explain the Python work performed in that cell.
+
+### Model 1: Scratch Transformer Breakdown
+
+- Phase 0 — Cell 000 (Markdown): Introduces the project and identifies this notebook as the from-scratch PyTorch Transformer model.
+- Phase 1 — Cell 001 (Markdown): Opens the setup phase for configuration, reproducibility, and runtime preparation.
+- Phase 1.1 — Cell 002 (Markdown): Labels the library-import section.
+- Phase 1.1 — Cell 003 (Code): Imports PyTorch, pandas, NumPy, W&B, and evaluation tools. It fixes random seeds and selects the CPU device used for safe local checks.
+- Phase 1.2 — Cell 004 (Markdown): Labels the Kaggle and local path-resolution section.
+- Phase 1.2 — Cell 005 (Code): Defines the Kaggle input paths and a fallback resolver that checks local data folders when the Kaggle files are unavailable. It prints the final paths that will be used.
+- Phase 1.3 — Cell 006 (Markdown): Labels the W&B and hyperparameter section.
+- Phase 1.3 — Cell 007 (Code): Defines the model and training settings, loads a local environment file when available, obtains the W&B key from Kaggle Secrets or the environment, and starts the Model 1 W&B run.
+- Phase 2 — Cell 008 (Markdown): Opens the data-pipeline phase.
+- Phase 2.1 — Cell 009 (Markdown): Labels text cleaning and vocabulary creation.
+- Phase 2.1 — Cell 010 (Code): Defines a simple lowercase word tokenizer and a vocabulary that maps common words to integers. It also reserves IDs for padding and unknown words.
+- Phase 2.2 — Cell 011 (Markdown): Labels CSV loading and schema checks.
+- Phase 2.2 — Cell 012 (Code): Reads train and test CSV files, adds a missing context column if needed, replaces empty text values, and builds the vocabulary only from training text to avoid test-label leakage.
+- Phase 2.3 — Cell 013 (Markdown): Labels model-specific input construction.
+- Phase 2.3 — Cell 014 (Code): Builds a long-format dataset with one record for every question-option pair. It converts each combined prompt and option into fixed-length token IDs, creates a padding mask, and assigns the correct option label.
+- Phase 2.4 — Cell 015 (Markdown): Labels the train/validation split and DataLoader section.
+- Phase 2.4 — Cell 016 (Code): Splits training questions into training and validation sets, creates datasets for train, validation, and test data, and wraps them in PyTorch DataLoaders with the selected batch settings.
+- Phase 3 — Cell 017 (Markdown): Opens the model-architecture phase.
+- Phase 3.1 — Cell 018 (Markdown): Labels the sinusoidal positional-encoding section.
+- Phase 3.1 — Cell 019 (Code): Defines fixed sine-and-cosine position vectors and adds them to token embeddings so the encoder can use word order. The vectors are stored as a non-trainable model buffer.
+- Phase 3.2 — Cell 020 (Markdown): Labels the custom Transformer encoder-block section.
+- Phase 3.2 — Cell 021 (Code): Defines the scratch model: token embedding, positional encoding, a two-layer Transformer encoder, masked mean pooling, and a small binary scoring head. It also initializes the trainable weights and ignores padding during attention and pooling.
+- Phase 3.3 — Cell 022 (Markdown): Labels the forward-pass and tensor-shape check.
+- Phase 3.3 — Cell 023 (Code): Creates a small random input batch and sends it through the model without gradients. It checks the output shape and counts the trainable parameters.
+- Phase 4 — Cell 024 (Markdown): Opens the training and evaluation phase.
+- Phase 4.1 — Cell 025 (Markdown): Labels the loss and metric section.
+- Phase 4.1 — Cell 026 (Code): Adds a helper that calculates MAP@3 by checking where the correct option appears in the top three predictions. It also sets the switch that distinguishes a short smoke test from full training.
+- Phase 4.2 — Cell 027 (Markdown): Labels the validation-pass routine.
+- Phase 4.2 — Cell 028 (Code): Runs the model without gradients over validation batches, calculates loss, accuracy, and macro-F1, groups option scores by question, and calculates MAP@3 from the ranked options.
+- Phase 4.3 — Cell 029 (Markdown): Labels model, optimizer, and loss creation.
+- Phase 4.3 — Cell 030 (Code): Creates the scratch model, binary cross-entropy loss, AdamW optimizer, and cosine learning-rate scheduler. It prints the training mode and parameter count.
+- Phase 4.4 — Cell 031 (Markdown): Labels the training-loop and checkpoint section.
+- Phase 4.4 — Cell 032 (Code): Trains the model epoch by epoch, clips gradients, evaluates on validation data, logs metrics to W&B, and saves the checkpoint with the best validation MAP@3.
+- Phase 5 — Cell 033 (Markdown): Opens the conclusion and inference phase.
+- Phase 5.1 — Cell 034 (Markdown): Labels test prediction and submission generation.
+- Phase 5.1 — Cell 035 (Code): Reloads the best scratch checkpoint when it exists, scores every test question-option pair, and stores the sigmoid score for each option.
+- Phase 5.2 — Cell 036 (Markdown): Labels ranking and submission formatting.
+- Phase 5.2 — Cell 037 (Code): Sorts the five option scores for each question, keeps the top three letters, reads the sample-submission column names, and builds the final submission table.
+- Phase 5.3 — Cell 038 (Markdown): Labels artifact logging and W&B shutdown.
+- Phase 5.3 — Cell 039 (Code): Verifies that submission IDs match the sample file, writes submission.csv, uploads it as a W&B artifact, and closes the W&B run.
+
+### Model 2: Pretrained BERT Breakdown
+
+- Phase 0 — Cell 000 (Markdown): Introduces the pretrained BERT multiple-choice notebook and its five-phase workflow.
+- Phase 1 — Cell 001 (Markdown): Opens the setup phase.
+- Phase 1.1 — Cell 002 (Markdown): Labels the import section.
+- Phase 1.1 — Cell 003 (Code): Imports Hugging Face, PyTorch, data, metric, and W&B libraries. It also suppresses noisy warnings and prepares display settings.
+- Phase 1.2 — Cell 004 (Markdown): Labels the local BERT download and cache section.
+- Phase 1.2 — Cell 005 (Code): Sets the local model folder and clones bert-base-uncased when it is not already present. It then reports whether the cache is available.
+- Phase 1.3 — Cell 006 (Markdown): Labels path resolution and random-seed setup.
+- Phase 1.3 — Cell 007 (Code): Defines a resolver for Kaggle and local data paths, selects GPU when available, and fixes Python, NumPy, and PyTorch random seeds.
+- Phase 1.4 — Cell 008 (Markdown): Labels W&B configuration and hyperparameters.
+- Phase 1.4 — Cell 009 (Code): Loads the W&B key from Kaggle Secrets or the local environment, starts the Model 2 W&B run, and records the BERT, optimizer, batch, epoch, and sequence-length settings.
+- Phase 2 — Cell 010 (Markdown): Opens the data-pipeline phase.
+- Phase 2.1 — Cell 011 (Markdown): Labels CSV loading and tokenizer initialization.
+- Phase 2.1 — Cell 012 (Code): Reads train and test data, fixes the A-to-E option order, loads the local BERT tokenizer, and sets the maximum sequence length from the W&B configuration.
+- Phase 2.2 — Cell 013 (Markdown): Labels the multiple-choice dataset and input-construction section.
+- Phase 2.2 — Cell 014 (Code): Defines a dataset that pairs the same prompt with each of the five options. It returns token IDs and attention masks shaped for five choices, plus the correct option index during training.
+- Phase 2.3 — Cell 015 (Markdown): Labels the data split and DataLoader section.
+- Phase 2.3 — Cell 016 (Code): Splits the training data into train and validation sets, creates three DataLoaders, and checks that a batch has the expected five-choice tensor shape.
+- Phase 3 — Cell 017 (Markdown): Opens the model-architecture phase.
+- Phase 3.1 — Cell 018 (Markdown): Labels BERT multiple-choice model and optimizer setup.
+- Phase 3.1 — Cell 019 (Code): Loads the pretrained BERT multiple-choice model, moves it to the selected device, creates five-class cross-entropy loss and AdamW, and builds a linear warmup-and-decay scheduler.
+- Phase 4 — Cell 020 (Markdown): Opens training and evaluation.
+- Phase 4.1 — Cell 021 (Markdown): Labels the metric-functions section.
+- Phase 4.1 — Cell 022 (Code): Defines Average Precision at 3 and a validation routine. The routine calculates loss, top-1 accuracy, macro-F1, and MAP@3 from BERT's five option logits.
+- Phase 4.2 — Cell 023 (Markdown): Labels the fine-tuning loop and checkpointing.
+- Phase 4.2 — Cell 024 (Code): Fine-tunes BERT for the configured epochs, performs gradient clipping and learning-rate scheduling, logs metrics to W&B, and saves the checkpoint with the lowest validation loss.
+- Phase 5 — Cell 025 (Markdown): Opens the inference and submission phase.
+- Phase 5.1 — Cell 026 (Markdown): Labels checkpoint reload and batched inference.
+- Phase 5.1 — Cell 027 (Code): Reloads the best BERT checkpoint, scores the test questions in batches, converts the three highest logits into option letters, writes submission.csv using the sample schema, logs the artifact, and closes W&B.
+
+### Model 3: Custom Ensemble Breakdown
+
+- Phase 0 — Cell 000 (Markdown): Introduces the custom ensemble notebook, which combines lexical, semantic, and relative-ranking features.
+- Phase 1 — Cell 001 (Markdown): Opens the setup phase.
+- Phase 1.1 — Cell 002 (Markdown): Labels runtime dependency installation.
+- Phase 1.1 — Cell 003 (Code): Installs rank_bm25 and sentence-transformers so the notebook has the retrieval and embedding packages it needs on Kaggle.
+- Phase 1.2 — Cell 004 (Markdown): Labels the library-import section.
+- Phase 1.2 — Cell 005 (Code): Imports pandas, NumPy, TF-IDF, BM25, MiniLM, LightGBM, XGBoost, W&B, metrics, and GroupKFold.
+- Phase 1.3 — Cell 006 (Markdown): Labels Kaggle and local path resolution.
+- Phase 1.3 — Cell 007 (Code): Sets the three Kaggle data paths, replaces them with local alternatives when needed, and prints the paths selected for the run.
+- Phase 1.4 — Cell 008 (Markdown): Labels W&B configuration and hyperparameters.
+- Phase 1.4 — Cell 009 (Code): Loads the W&B key, starts the Model 3 run, and records the TF-IDF, MiniLM, cross-validation, tree-model, and blend settings in W&B.
+- Phase 2 — Cell 010 (Markdown): Opens the data-pipeline phase.
+- Phase 2.1 — Cell 011 (Markdown): Labels CSV loading and schema checking.
+- Phase 2.1 — Cell 012 (Code): Reads train and test data, adds a blank context field if necessary, fills missing text with empty strings, and fixes the option order.
+- Phase 2.2 — Cell 013 (Markdown): Labels text normalization and lexical feature creation.
+- Phase 2.2 — Cell 014 (Code): Cleans text, builds context-plus-prompt queries, gathers a shared corpus, and fits word-level and character-level TF-IDF vectorizers.
+- Phase 2.3 — Cell 015 (Markdown): Labels semantic feature engineering.
+- Phase 2.3 — Cell 016 (Code): Loads MiniLM, encodes questions and options in batches, and computes normalized question-option cosine similarities.
+- Phase 3 — Cell 017 (Markdown): Opens the model-architecture and feature-definition phase.
+- Phase 3.1 — Cell 018 (Markdown): Labels long-format feature extraction.
+- Phase 3.1 — Cell 019 (Code): Defines Jaccard overlap and builds one feature row per question-option pair. It combines word TF-IDF, character TF-IDF, BM25, MiniLM similarity, word overlap, and text-length features for both train and test data.
+- Phase 3.2 — Cell 020 (Markdown): Labels relative-ranking feature augmentation.
+- Phase 3.2 — Cell 021 (Code): Adds each main feature's difference from the question mean and its within-question rank. It then creates the final feature-column list used by the tree models.
+- Phase 4 — Cell 022 (Markdown): Opens training and evaluation.
+- Phase 4.1 — Cell 023 (Markdown): Labels grouped cross-validation training.
+- Phase 4.1 — Cell 024 (Code): Builds train and test feature matrices, creates GroupKFold splits by question ID, trains LightGBM and XGBoost inside every fold, applies class balancing and early stopping, and averages validation and test probabilities.
+- Phase 4.2 — Cell 025 (Markdown): Labels blend-weight search and out-of-fold evaluation.
+- Phase 4.2 — Cell 026 (Code): Defines MAP@3 for grouped option rows, sweeps the LightGBM blend weight, selects the best out-of-fold value, calculates accuracy, macro-F1, and log loss, and logs those results to W&B.
+- Phase 5 — Cell 027 (Markdown): Opens the conclusion and submission phase.
+- Phase 5.1 — Cell 028 (Markdown): Labels test inference, blending, and submission export.
+- Phase 5.1 — Cell 029 (Code): Blends averaged test probabilities with the selected alpha, ranks the five options per question, matches the sample-submission column names, writes submission.csv, and finishes the W&B run.
