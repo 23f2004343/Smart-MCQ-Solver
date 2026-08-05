@@ -1,0 +1,7 @@
+streamlit
+lightgbm
+joblib
+sentence-transformers
+scikit-learn
+pandas
+torch
