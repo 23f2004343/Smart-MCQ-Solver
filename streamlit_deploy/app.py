@@ -212,18 +212,21 @@ def score_bar_html(label, text, score, max_score, rank):
     pct     = int(score / (max_score + 1e-9) * 100)
     color   = _PALETTE[rank]
     medal   = _MEDALS[rank]
-    preview = (text[:72] + "…") if len(text) > 72 else text
-    return f"""
-    <div class="score-row">
-      <span class="score-badge">{medal} <b>{label}</b></span>
-      <div class="score-bar-track">
-        <div class="score-bar-fill" style="width:{pct}%;background:{color};"></div>
-      </div>
-      <span class="score-num">{score:.4f}</span>
-    </div>
-    <div style="font-size:0.82rem;color:rgba(255,255,255,0.5);
-                padding:0 0.9rem 0.3rem 3.4rem;line-height:1.4;">{preview}</div>
-    """
+    preview = (text[:72] + "\u2026") if len(text) > 72 else text
+    # Zero-indented HTML — any leading whitespace on a line triggers Markdown
+    # code-block parsing in st.markdown, showing raw tags instead of rendered HTML.
+    return (
+        f'<div class="score-row">'
+        f'<span class="score-badge">{medal} <b>{label}</b></span>'
+        f'<div class="score-bar-track">'
+        f'<div class="score-bar-fill" style="width:{pct}%;background:{color};"></div>'
+        f'</div>'
+        f'<span class="score-num">{score:.4f}</span>'
+        f'</div>'
+        f'<div style="font-size:0.82rem;color:rgba(255,255,255,0.5);'
+        f'padding:0.1rem 0.9rem 0.5rem 1rem;line-height:1.4;">'
+        f'{preview}</div>'
+    )
 
 
 # ── Sample questions ───────────────────────────────────────────────────────────
@@ -404,8 +407,17 @@ if predict_btn:
             score_bar_html(lbl, txt, sc, max_score, rank_i)
             for rank_i, (lbl, txt, sc) in enumerate(ranked)
         )
+        # Bubble card: glassmorphism background + gradient glow border
+        bubble_style = (
+            "background:rgba(255,255,255,0.05);"
+            "border:1.5px solid rgba(167,139,250,0.45);"
+            "border-radius:18px;"
+            "padding:1.1rem 1.3rem;"
+            "box-shadow:0 0 22px rgba(124,58,237,0.25),0 0 6px rgba(96,165,250,0.15);"
+            "backdrop-filter:blur(14px);"
+        )
         st.markdown(
-            f'<div class="card" style="padding:1rem 1.2rem">{bars_html}</div>',
+            f'<div style="{bubble_style}">{bars_html}</div>',
             unsafe_allow_html=True,
         )
 
