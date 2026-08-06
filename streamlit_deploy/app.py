@@ -422,7 +422,6 @@ if predict_btn:
         )
 
     with right_col:
-        st.markdown("#### 📈 Score Chart")
         # Bubble container — mirrors the Full Ranking glow border exactly
         chart_bubble = (
             "background:rgba(255,255,255,0.05);"
@@ -433,6 +432,7 @@ if predict_btn:
             "backdrop-filter:blur(14px);"
         )
         st.markdown(f'<div style="{chart_bubble}">', unsafe_allow_html=True)
+        st.markdown("#### 📈 Score Chart")
         chart_df = pd.DataFrame(
             {"Option": [lbl for lbl, _, _ in ranked],
              "Score":  [sc  for _, _,  sc in ranked]},
