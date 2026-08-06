@@ -11,14 +11,12 @@ submission.csv
 rules/
 AGENTS.md
 .antigravity/
-nb/cinema.ipynb
-nb/miles.ipynb
+notebooks/cinema.ipynb
 generate_notebook.py
 smart-mcq-solver-challenge.zip
-nb/fallback_models/
+notebooks/fallback_models/
 viva/
 report/
-AUDIT_AND_TOC_ANALYSIS.md
 
 # Local Hugging Face model downloads and caches
 bert-base-uncased/
