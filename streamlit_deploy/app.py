@@ -422,23 +422,13 @@ if predict_btn:
         )
 
     with right_col:
-        # Bubble container — mirrors the Full Ranking glow border exactly
-        chart_bubble = (
-            "background:rgba(255,255,255,0.05);"
-            "border:1.5px solid rgba(96,165,250,0.45);"
-            "border-radius:18px;"
-            "padding:1.1rem 1.3rem;"
-            "box-shadow:0 0 22px rgba(37,99,235,0.22),0 0 6px rgba(167,139,250,0.15);"
-            "backdrop-filter:blur(14px);"
-        )
-        st.markdown(f'<div style="{chart_bubble}">', unsafe_allow_html=True)
-        st.markdown("#### 📈 Score Chart")
-        chart_df = pd.DataFrame(
-            {"Option": [lbl for lbl, _, _ in ranked],
-             "Score":  [sc  for _, _,  sc in ranked]},
-        ).set_index("Option")
-        st.bar_chart(chart_df, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("#### 📈 Score Chart")
+            chart_df = pd.DataFrame(
+                {"Option": [lbl for lbl, _, _ in ranked],
+                 "Score":  [sc  for _, _,  sc in ranked]},
+            ).set_index("Option")
+            st.bar_chart(chart_df, use_container_width=True)
 
     # ── Feature breakdown expander ────────────────────────────────────────────
     with st.expander("🔬 Feature Breakdown (per option)", expanded=False):
