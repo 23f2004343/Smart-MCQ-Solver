@@ -27,15 +27,20 @@ Run the final notebooks independently so each model remains isolated for viva re
 
 | Model | Notebook | Purpose |
 |---|---|---|
-| Model 1 | `nb/scratch/base_model.ipynb` | Custom PyTorch transformer-style encoder built from scratch. |
-| Model 2 | `nb/pretrained/pre_trained.ipynb` | Fine-tuned Hugging Face BERT multiple-choice model. |
-| Model 3 | `nb/custom/model3.ipynb` | Lexical (TF-IDF/BM25) and semantic (MiniLM) similarity feature blending with LightGBM/XGBoost ensemble. |
+| Model 1 | `notebooks/scratch/base_model.ipynb` | Custom PyTorch transformer-style encoder built from scratch. |
+| Model 2 | `notebooks/pretrained/pre_trained.ipynb` | Fine-tuned Hugging Face BERT multiple-choice model. |
+| Model 3 | `notebooks/custom/model3.ipynb` | Lexical (TF-IDF/BM25) and semantic (MiniLM) similarity feature blending with LightGBM/XGBoost ensemble. |
 
 For local checks, keep runs small and CPU-safe. Production training and final validation should be executed on Kaggle GPUs through `kaggle kernels push` using the notebook-specific `kernel-metadata.json` files.
 
 ## Final Results
 
-The final qualifying solution achieved **0.74397 MAP@3** (Kaggle Leaderboard Score), crossing the required 0.73 viva cutoff. Model 3 combines lexical (TF-IDF/BM25) and semantic (MiniLM) similarity features blended with a LightGBM/XGBoost ensemble — no external vector-search RAG pipeline is used. All final notebooks generate a `submission.csv` in the Kaggle format:
+| Model | Kaggle MAP@3 | Notes |
+|---|---|---|
+| Model 2 — Fine-Tuned BERT | **0.74397** ✓ | Clears the 0.73 viva cutoff; 3-epoch cap + min-`val_loss` checkpoint. |
+| Model 3 — Feature Ensemble | **0.74608** ✓ | Best overall score; LightGBM/XGBoost blend over 27 lexical + semantic features. |
+
+Model 3 combines lexical (TF-IDF/BM25) and semantic (MiniLM) similarity features blended with a LightGBM/XGBoost ensemble — no external vector-search RAG pipeline is used. All final notebooks generate a `submission.csv` in the Kaggle format:
 
 ```csv
 ID,Prediction
