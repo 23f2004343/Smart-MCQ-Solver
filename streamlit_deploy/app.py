@@ -466,7 +466,7 @@ if predict_btn:
 
     # ── Viva defence note ─────────────────────────────────────────────────────
     st.info(
-        "**Viva Defence** — The model scores each option independently: "
+        "**Model Explainability** — The model scores each option independently: "
         "high `minilm_cos` means the MiniLM sentence embedding of the option is "
         "semantically close to the question; high `word_cos` reflects TF-IDF lexical overlap; "
         "`_rank` features reveal which option is *relatively* strongest within the question, "
