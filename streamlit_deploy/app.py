@@ -431,6 +431,7 @@ if predict_btn:
             st.bar_chart(chart_df, use_container_width=True)
 
     # ── Feature breakdown expander ────────────────────────────────────────────
+    st.markdown("<br><br>", unsafe_allow_html=True)
     with st.expander("🔬 Feature Breakdown (per option)", expanded=False):
         st.markdown(
             "Raw feature values before relative-ranking augmentation. "
