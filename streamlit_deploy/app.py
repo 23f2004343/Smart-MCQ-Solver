@@ -1,16 +1,18 @@
 """
-Smart MCQ Solver — Streamlit App (Model 3: LightGBM + TF-IDF + MiniLM)
+Smart MCQ Solver — Streamlit App
+Model 3: LightGBM + XGBoost blend (55% LGB / 45% XGB) + TF-IDF + MiniLM
 
 Run locally:
     cd streamlit_deploy && streamlit run app.py
 
 Pipeline
 --------
-1. @st.cache_resource loaders initialise once: LGB model, TF-IDF bundle, MiniLM encoder.
-2. On submit: extract 21 features per option (lexical + semantic + structural + relative rank).
-3. lgb_model.predict_proba() scores each option; top-1 shown as the prediction.
+1. @st.cache_resource loaders initialise once: LGB, XGB, TF-IDF bundle, MiniLM encoder.
+2. On submit: build 21 features per option (lexical + semantic + structural + relative rank).
+3. Blend: final_score = 0.55 * lgb_proba + 0.45 * xgb_proba
+4. Rank all options; display top-3 with scores.
 
-No external LLM API calls — all inference runs locally.
+No external API calls — all inference is local.
 """
 
 import os
@@ -23,7 +25,7 @@ import joblib
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-# ── Page configuration ─────────────────────────────────────────────────────────
+# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Smart MCQ Solver — Model 3 Ensemble",
     page_icon="🧠",
@@ -31,7 +33,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Global CSS — premium dark-card theme ───────────────────────────────────────
+# ── Global CSS ─────────────────────────────────────────────────────────────────
 st.markdown(
     """
     <style>
@@ -51,34 +53,26 @@ st.markdown(
         backdrop-filter: blur(12px);
     }
     .hero-title {
-        font-size: 2.4rem;
-        font-weight: 700;
+        font-size: 2.4rem; font-weight: 700;
         background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0 0 0.3rem 0;
-        line-height: 1.2;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text; margin: 0 0 0.3rem 0; line-height: 1.2;
     }
     .hero-sub { color: rgba(255,255,255,0.55); font-size: 0.95rem; margin: 0; }
     .winner-banner {
         background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(96,165,250,0.15));
-        border: 1px solid rgba(52,211,153,0.4);
-        border-radius: 14px;
-        padding: 1.6rem 2rem;
-        margin: 1rem 0;
-        text-align: center;
+        border: 1px solid rgba(52,211,153,0.4); border-radius: 14px;
+        padding: 1.6rem 2rem; margin: 1rem 0; text-align: center;
     }
     .winner-label {
         font-size: 0.8rem; letter-spacing: 0.12em;
         text-transform: uppercase; color: rgba(52,211,153,0.85); margin-bottom: 0.4rem;
     }
     .winner-option { font-size: 2rem; font-weight: 700; color: #34d399; margin-bottom: 0.3rem; }
-    .winner-text { font-size: 1rem; color: rgba(255,255,255,0.78); line-height: 1.55; }
+    .winner-text   { font-size: 1rem; color: rgba(255,255,255,0.78); line-height: 1.55; }
     .score-row {
-        display: flex; align-items: center; gap: 0.8rem;
-        margin: 0.45rem 0; background: rgba(255,255,255,0.04);
-        border-radius: 8px; padding: 0.5rem 0.9rem;
+        display: flex; align-items: center; gap: 0.8rem; margin: 0.45rem 0;
+        background: rgba(255,255,255,0.04); border-radius: 8px; padding: 0.5rem 0.9rem;
     }
     .score-badge { font-weight: 600; font-size: 1.05rem; min-width: 1.8rem; color: #e2e8f0; }
     .score-bar-track {
@@ -115,10 +109,15 @@ def jaccard(a, b):
     return len(a & b) / len(a | b)
 
 
-# ── Cached resource loaders ────────────────────────────────────────────────────
+# ── Cached resource loaders — each runs once per process ──────────────────────
 @st.cache_resource(show_spinner="Loading LightGBM model…")
 def load_lgb():
     return joblib.load(_asset("lgb_model.joblib"))
+
+
+@st.cache_resource(show_spinner="Loading XGBoost model…")
+def load_xgb():
+    return joblib.load(_asset("xgb_model.joblib"))
 
 
 @st.cache_resource(show_spinner="Loading TF-IDF vectorizers…")
@@ -139,8 +138,9 @@ def load_config():
         return json.load(f)
 
 
-# Initialise all resources at startup (cached after first call)
+# Initialise at startup; subsequent reruns hit the cache
 lgb_model              = load_lgb()
+xgb_model              = load_xgb()
 word_tfidf, char_tfidf = load_tfidf()
 minilm                 = load_minilm()
 cfg                    = load_config()
@@ -148,12 +148,18 @@ FEAT_COLS              = cfg["feature_cols"]
 RANK_FEATS             = cfg["rank_feats"]
 OPTION_COLS            = cfg["option_cols"]
 
+# Blend weights (match competition-tuned alpha)
+LGB_WEIGHT = 0.55
+XGB_WEIGHT = 0.45
+
 
 # ── Feature extraction ─────────────────────────────────────────────────────────
 def build_feature_matrix(prompt, options):
     """
-    Returns ndarray shape (5, 21) matching FEAT_COLS order.
-    Base (11): word_cos, char_cos, jaccard, word_intersect, minilm_cos, structural ratios
+    Returns float32 ndarray shape (5, 21) in FEAT_COLS order.
+
+    Base (11): word_cos, char_cos, jaccard, word_intersect, minilm_cos,
+               opt_len, prompt_len, len_ratio, opt_wc, prompt_wc, wc_ratio
     Relative (10): {feat}_diff and {feat}_rank per RANK_FEATS
     """
     q_clean  = clean(prompt)
@@ -165,7 +171,7 @@ def build_feature_matrix(prompt, options):
     wq_vec = word_tfidf.transform([q_clean])
     cq_vec = char_tfidf.transform([q_clean])
 
-    # One batch forward pass: query + 5 options (faster than individual encodes)
+    # Single batch encode: query + all 5 options together
     texts  = [q_clean] + [clean(o) for o in options]
     embeds = minilm.encode(texts, normalize_embeddings=True, batch_size=6,
                            show_progress_bar=False)
@@ -197,6 +203,7 @@ def build_feature_matrix(prompt, options):
         })
 
     feat_df = pd.DataFrame(rows)
+    # Within-question relative features: deviation from mean and descending rank
     for feat in RANK_FEATS:
         feat_df[f"{feat}_diff"] = feat_df[feat] - feat_df[feat].mean()
         feat_df[f"{feat}_rank"] = feat_df[feat].rank(ascending=False, method="min")
@@ -204,7 +211,14 @@ def build_feature_matrix(prompt, options):
     return feat_df[FEAT_COLS].values.astype(np.float32)
 
 
-# ── Score-bar HTML helper ──────────────────────────────────────────────────────
+# ── Inference: blend LGB + XGB ────────────────────────────────────────────────
+def blend_predict(X):
+    lgb_probs = lgb_model.predict_proba(X)[:, 1]
+    xgb_probs = xgb_model.predict_proba(X)[:, 1]
+    return LGB_WEIGHT * lgb_probs + XGB_WEIGHT * xgb_probs
+
+
+# ── Score-bar HTML (zero-indented to avoid Markdown code-block rendering) ──────
 _PALETTE = ["#34d399", "#60a5fa", "#a78bfa", "#f59e0b", "#f87171"]
 _MEDALS  = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
 
@@ -213,8 +227,6 @@ def score_bar_html(label, text, score, max_score, rank):
     color   = _PALETTE[rank]
     medal   = _MEDALS[rank]
     preview = (text[:72] + "\u2026") if len(text) > 72 else text
-    # Zero-indented HTML — any leading whitespace on a line triggers Markdown
-    # code-block parsing in st.markdown, showing raw tags instead of rendered HTML.
     return (
         f'<div class="score-row">'
         f'<span class="score-badge">{medal} <b>{label}</b></span>'
@@ -269,7 +281,7 @@ with st.sidebar:
           <div style="font-size:2.8rem;margin-bottom:0.3rem">🧠</div>
           <div style="font-weight:700;font-size:1.1rem;color:#e2e8f0">Smart MCQ Solver</div>
           <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.2rem">
-            Model 3 · LightGBM Ensemble
+            Model 3 · LightGBM + XGBoost Ensemble
           </div>
         </div>
         """,
@@ -283,17 +295,16 @@ with st.sidebar:
     )
     st.divider()
     st.markdown(
-        """
+        f"""
         **Pipeline**
         1. Word + Char TF-IDF cosine similarity
         2. Jaccard & vocabulary overlap
         3. MiniLM-L6-v2 semantic embedding
         4. Relative rank features (within-question)
-        5. LightGBM `predict_proba` scoring
+        5. LightGBM + XGBoost blend ({int(LGB_WEIGHT*100)}% / {int(XGB_WEIGHT*100)}%)
 
         **Features:** 21 total (11 base + 10 rank)
-        **Val accuracy:** 96.4% (2-fold GroupKFold)
-        **No external LLM API calls.**
+        **No external API calls.**
         """,
     )
 
@@ -306,8 +317,8 @@ st.markdown(
     <div class="card">
       <p class="hero-title">Smart MCQ Solver</p>
       <p class="hero-sub">
-        Model 3 — LightGBM + TF-IDF + MiniLM ensemble &nbsp;·&nbsp;
-        Enter a question and up to 5 options to get a ranked prediction.
+        Model 3 — LightGBM + XGBoost blend · TF-IDF + MiniLM features &nbsp;·&nbsp;
+        Enter a question and up to 5 options to get a ranked top-3 prediction.
       </p>
     </div>
     """,
@@ -356,26 +367,25 @@ if predict_btn:
         st.error("⚠️ Please enter a question before predicting.")
         st.stop()
 
-    filled = [(lbl, txt) for lbl, txt in zip(option_labels, options_raw) if txt.strip()]
-    if len(filled) < 2:
+    if sum(1 for o in options_raw if o.strip()) < 2:
         st.error("⚠️ Please fill in at least 2 answer options.")
         st.stop()
 
-    with st.spinner("Computing features and scoring options…"):
+    with st.spinner("Computing features and blending model scores…"):
         try:
             X      = build_feature_matrix(question, options_raw)
-            scores = lgb_model.predict_proba(X)[:, 1]   # P(relevant) per option
+            scores = blend_predict(X)           # 55% LGB + 45% XGB
         except Exception as exc:
             st.error(f"❌ Inference failed: {exc}")
             st.stop()
 
-    # Rank descending by score
+    # Sort all 5 options by blended score
     ranked = sorted(
         zip(option_labels, options_raw, scores),
         key=lambda x: -x[2],
     )
     top_lbl, top_txt, top_score = ranked[0]
-    max_score = ranked[0][2]
+    max_score = top_score
 
     # ── Winner banner ──────────────────────────────────────────────────────────
     st.markdown(
@@ -389,12 +399,19 @@ if predict_btn:
         unsafe_allow_html=True,
     )
 
-    # ── Metric tiles ──────────────────────────────────────────────────────────
+    # ── Metric tiles (top-1, confidence, gap to 2nd) ───────────────────────────
     mc1, mc2, mc3 = st.columns(3)
     mc1.metric("Top Option", f"Option {top_lbl}")
-    mc2.metric("Confidence Score", f"{top_score:.4f}")
+    mc2.metric("Blend Score", f"{top_score:.4f}")
     gap = top_score - ranked[1][2] if len(ranked) > 1 else 0.0
     mc3.metric("Gap to 2nd Place", f"{gap:+.4f}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Top-3 callout ─────────────────────────────────────────────────────────
+    top3 = ranked[:3]
+    t3_labels = " → ".join(f"**{lbl}**" for lbl, _, _ in top3)
+    st.markdown(f"📋 **Top-3 Prediction:** {t3_labels}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -407,7 +424,6 @@ if predict_btn:
             score_bar_html(lbl, txt, sc, max_score, rank_i)
             for rank_i, (lbl, txt, sc) in enumerate(ranked)
         )
-        # Bubble card: glassmorphism background + gradient glow border
         bubble_style = (
             "background:rgba(255,255,255,0.05);"
             "border:1.5px solid rgba(167,139,250,0.45);"
@@ -434,8 +450,8 @@ if predict_btn:
     st.markdown("<br><br>", unsafe_allow_html=True)
     with st.expander("🔬 Feature Breakdown (per option)", expanded=False):
         st.markdown(
-            "Raw feature values before relative-ranking augmentation. "
-            "`minilm_cos` is computed live using the MiniLM-L6-v2 sentence encoder."
+            "Raw base-feature values before relative-ranking augmentation. "
+            "`minilm_cos` is computed live using MiniLM-L6-v2."
         )
         feat_rows = []
         for lbl, opt_raw in zip(option_labels, options_raw):
@@ -465,11 +481,11 @@ if predict_btn:
                 use_container_width=True,
             )
 
-    # ── Viva defence note ─────────────────────────────────────────────────────
+    # ── Blend explainability note ─────────────────────────────────────────────
     st.info(
-        "**Model Explainability** — The model scores each option independently: "
-        "high `minilm_cos` means the MiniLM sentence embedding of the option is "
-        "semantically close to the question; high `word_cos` reflects TF-IDF lexical overlap; "
-        "`_rank` features reveal which option is *relatively* strongest within the question, "
-        "making the ranker scale-invariant across questions of different difficulty."
+        f"**Model Explainability** — Final score = {LGB_WEIGHT} × LightGBM + "
+        f"{XGB_WEIGHT} × XGBoost. Each model independently scores P(relevant) for "
+        "every option; blending reduces variance. High `minilm_cos` signals semantic "
+        "closeness between the option and the question; `_rank` features make the "
+        "ranker scale-invariant across questions with different difficulty levels."
     )

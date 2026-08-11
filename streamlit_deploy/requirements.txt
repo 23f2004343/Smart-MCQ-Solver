@@ -1,5 +1,6 @@
 streamlit
 lightgbm
+xgboost
 joblib
 sentence-transformers
 scikit-learn
